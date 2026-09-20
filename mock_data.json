@@ -1,0 +1,30 @@
+{
+    "publication_invitation": {
+        "title": "🚀 Préparez votre avenir : Les inscriptions pour la rentrée sont ouvertes !",
+        "body": "Rejoignez notre campus d'excellence et donnez une nouvelle dimension à votre parcours académique. Nous vous offrons un cadre d'apprentissage innovant, des professeurs passionnés et des opportunités uniques pour bâtir la carrière de vos rêves. N'attendez plus, inscrivez-vous dès aujourd'hui et prenez votre avenir en main !",
+        "filieres": [
+            {
+                "name": "Licence en Ingénierie Quantique Appliquée",
+                "description": "Apprenez à maîtriser les technologies de demain en explorant le calcul quantique et ses applications industrielles.",
+                "duration": "3 ans",
+                "debouches": "Ingénieur quantique, chercheur en technologies avancées"
+            },
+            {
+                "name": "Master en Éco-Conception et Villes Durables",
+                "description": "Concevez les métropoles de demain avec une approche centrée sur l'écologie et l'innovation urbaine.",
+                "duration": "2 ans",
+                "debouches": "Urbaniste écologique, consultant en développement durable"
+            },
+            {
+                "name": "Bachelor en Cyber-Psychologie",
+                "description": "Étudiez l'impact du numérique sur le comportement humain et la sécurité des données comportementales.",
+                "duration": "3 ans",
+                "debouches": "Cyber-psychologue, analyste en sécurité humaine"
+            }
+        ]
+    },
+    "conseils_carrieres": {
+        "menu_title": "Conseils et Carrières",
+        "advice_text": "Il est tout à fait normal de traverser des périodes de doute ou de démotivation au cours de ses études. Si vous songez à abandonner, rappelez-vous pourquoi vous avez commencé et tout le chemin que vous avez déjà parcouru. Chaque défi surmonté vous rend plus fort et vous rapproche de vos objectifs. Ne prenez pas de décision précipitée sous le coup de la fatigue ou du stress. Prenez le temps de souffler, parlez-en à vos proches, et n'hésitez surtout pas à solliciter de l'aide. Votre conseiller pédagogique, les professeurs ou les services d'accompagnement de l'école sont là pour vous écouter et vous aider à trouver des solutions adaptées. Vous n'êtes pas seul(e) dans cette épreuve, accrochez-vous !"
+    }
+}
