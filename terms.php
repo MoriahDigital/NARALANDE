@@ -11,6 +11,11 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+$termsColumn = $pdo->query("SHOW COLUMNS FROM users LIKE 'terms_accepted'")->fetch();
+if (!$termsColumn) {
+    $pdo->exec("ALTER TABLE users ADD terms_accepted TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+}
+
 // Check if already accepted
 $stmt = $pdo->prepare("SELECT terms_accepted FROM users WHERE id = ?");
 $stmt->execute([$user_id]);

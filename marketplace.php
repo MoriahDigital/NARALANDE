@@ -22,16 +22,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $current_role === 'admin') {
     $image = null;
 
     if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/uploads/marketplace/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $tmp_name = $_FILES['product_image']['tmp_name'];
-        $filename = basename($_FILES['product_image']['name']);
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
-            $new_name = 'product_' . $user_id . '_' . time() . '.' . $ext;
-            if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                $image = $new_name;
+        if (!validateUploadSize($_FILES['product_image'])) {
+            $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+        } else {
+            $upload_dir = __DIR__ . '/uploads/marketplace/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            
+            $tmp_name = $_FILES['product_image']['tmp_name'];
+            $filename = basename($_FILES['product_image']['name']);
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                $new_name = 'product_' . $user_id . '_' . time() . '.' . $ext;
+                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                    $image = $new_name;
+                }
             }
         }
     }
@@ -64,16 +68,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $current_role === 'admin') {
         $image = null;
         
         if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/uploads/marketplace/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            
-            $tmp_name = $_FILES['product_image']['tmp_name'];
-            $filename = basename($_FILES['product_image']['name']);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
-                $new_name = 'product_' . $user_id . '_' . time() . '.' . $ext;
-                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                    $image = $new_name;
+            if (!validateUploadSize($_FILES['product_image'])) {
+                $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+            } else {
+                $upload_dir = __DIR__ . '/uploads/marketplace/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+                
+                $tmp_name = $_FILES['product_image']['tmp_name'];
+                $filename = basename($_FILES['product_image']['name']);
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                    $new_name = 'product_' . $user_id . '_' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                        $image = $new_name;
+                    }
                 }
             }
         }
@@ -109,10 +117,10 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <main class="surface-main">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <h2 style="color: var(--color-primary-dark);"><i class="fa-solid fa-store"></i> Boutique / Annonces</h2>
             <?php if($current_role === 'admin'): ?>

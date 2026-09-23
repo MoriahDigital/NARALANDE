@@ -23,16 +23,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $current_role === 'admin') {
     $image = null;
 
     if (isset($_FILES['job_image']) && $_FILES['job_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/uploads/jobs/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $tmp_name = $_FILES['job_image']['tmp_name'];
-        $filename = basename($_FILES['job_image']['name']);
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-            $new_name = 'job_' . time() . '.' . $ext;
-            if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                $image = $new_name;
+        if (!validateUploadSize($_FILES['job_image'])) {
+            $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+        } else {
+            $upload_dir = __DIR__ . '/uploads/jobs/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            
+            $tmp_name = $_FILES['job_image']['tmp_name'];
+            $filename = basename($_FILES['job_image']['name']);
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                $new_name = 'job_' . time() . '.' . $ext;
+                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                    $image = $new_name;
+                }
             }
         }
     }
@@ -59,16 +63,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $current_role === 'admin') {
         $image = null;
         
         if (isset($_FILES['job_image']) && $_FILES['job_image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/uploads/jobs/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            
-            $tmp_name = $_FILES['job_image']['tmp_name'];
-            $filename = basename($_FILES['job_image']['name']);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $new_name = 'job_' . time() . '.' . $ext;
-                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                    $image = $new_name;
+            if (!validateUploadSize($_FILES['job_image'])) {
+                $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+            } else {
+                $upload_dir = __DIR__ . '/uploads/jobs/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+                
+                $tmp_name = $_FILES['job_image']['tmp_name'];
+                $filename = basename($_FILES['job_image']['name']);
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                    $new_name = 'job_' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                        $image = $new_name;
+                    }
                 }
             }
         }
@@ -100,16 +108,40 @@ if (isset($_GET['delete']) && $current_role === 'admin') {
 $stmt = $pdo->query("SELECT j.*, u.first_name, u.last_name, u.profile_photo FROM jobs j JOIN users u ON j.user_id = u.id ORDER BY j.created_at DESC");
 $jobs = $stmt->fetchAll();
 
+// Local career assistant: match the user's request with the existing offers.
+$career_question = trim($_GET['career_question'] ?? '');
+$assistant_matches = [];
+if ($career_question !== '') {
+    $keywords = array_values(array_filter(preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($career_question), -1, PREG_SPLIT_NO_EMPTY), static function ($word) {
+        return mb_strlen($word) > 2;
+    }));
+    foreach ($jobs as $job) {
+        $searchable = mb_strtolower(implode(' ', [$job['title'], $job['company'], $job['location'], $job['salary'], $job['description']]));
+        $score = 0;
+        foreach ($keywords as $keyword) {
+            if (mb_strpos($searchable, $keyword) !== false) $score += mb_strlen($keyword) >= 6 ? 3 : 1;
+        }
+        if ($score > 0) {
+            $job['assistant_score'] = $score;
+            $assistant_matches[] = $job;
+        }
+    }
+    usort($assistant_matches, static function ($first, $second) {
+        return $second['assistant_score'] <=> $first['assistant_score'];
+    });
+    $assistant_matches = array_slice($assistant_matches, 0, 3);
+}
+
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <main class="surface-main">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <h2 style="color: var(--color-primary-dark);"><i class="fa-solid fa-briefcase"></i> Offres d'Emploi</h2>
+            <div><span class="eyebrow">Marché professionnel</span><h1><i class="fa-solid fa-briefcase"></i> Emplois</h1><p class="admin-subtitle">Trouvez une offre, présentez votre profil et passez à l’action.</p></div>
             <?php if($current_role === 'admin'): ?>
                 <button onclick="document.getElementById('add-form').style.display='block'" class="btn btn-primary">Publier une offre</button>
             <?php endif; ?>
@@ -118,6 +150,13 @@ require_once __DIR__ . '/includes/navbar.php';
         <?php if (isset($_GET['success'])): ?>
             <div class="alert alert-success" style="margin-bottom: 20px;">Offre d'emploi publiée avec succès !</div>
         <?php endif; ?>
+
+        <section class="career-assistant">
+            <div class="career-assistant-copy"><span class="assistant-orb"><i class="fa-solid fa-wand-magic-sparkles"></i></span><div><span class="eyebrow">Assistant carrière</span><h2>Quelle opportunité cherchez-vous ?</h2><p>Décrivez votre métier, vos compétences ou votre ville. Naralandé vous propose les offres les plus proches.</p></div></div>
+            <form method="GET" class="career-assistant-form"><input class="form-control" type="search" name="career_question" value="<?= htmlspecialchars($career_question) ?>" placeholder="Ex. développeur web à Conakry, télétravail..." required><button class="btn btn-primary" type="submit"><i class="fa-solid fa-sparkles"></i> Trouver</button></form>
+            <?php if ($career_question !== ''): ?><div class="assistant-result"><strong><?= $assistant_matches ? 'Voici les offres qui correspondent le mieux.' : 'Je n’ai pas trouvé de correspondance exacte.' ?></strong><?php if (!$assistant_matches): ?><small>Essayez un métier, une compétence ou une ville différente.</small><?php endif; ?></div><?php endif; ?>
+            <?php if ($assistant_matches): ?><div class="assistant-matches"><?php foreach ($assistant_matches as $match): ?><a href="#job-<?= $match['id'] ?>" class="assistant-match"><span class="match-score"><?= min(99, 60 + ($match['assistant_score'] * 8)) ?>%</span><span><strong><?= htmlspecialchars($match['title']) ?></strong><small><?= htmlspecialchars($match['company']) ?> · <?= htmlspecialchars($match['location'] ?: 'Lieu à préciser') ?></small></span><i class="fa-solid fa-arrow-right"></i></a><?php endforeach; ?></div><?php endif; ?>
+        </section>
 
         <?php if($current_role === 'admin'): ?>
         <!-- Form to add job -->
@@ -162,7 +201,7 @@ require_once __DIR__ . '/includes/navbar.php';
         <!-- List Jobs -->
         <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
             <?php foreach($jobs as $job): ?>
-                <div style="border: 1px solid #eee; border-radius: 8px; padding: 20px; transition: box-shadow 0.2s;">
+                <div id="job-<?= $job['id'] ?>" style="border: 1px solid #eee; border-radius: 8px; padding: 20px; transition: box-shadow 0.2s;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                         <div style="display: flex; gap: 20px; align-items: center;">
                             <?php if($job['image']): ?>

@@ -5,6 +5,11 @@ requireLogin();
 
 require_once __DIR__ . '/../config/database.php';
 
+$termsColumn = $pdo->query("SHOW COLUMNS FROM users LIKE 'terms_accepted'")->fetch();
+if (!$termsColumn) {
+    $pdo->exec("ALTER TABLE users ADD terms_accepted TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+}
+
 // Check if user has accepted terms
 if (isset($_SESSION['user_id'])) {
     $current_page = basename($_SERVER['PHP_SELF']);

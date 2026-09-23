@@ -7,7 +7,7 @@ $user_id = $_SESSION['user_id'];
 
 // Get unique contacts
 $stmt = $pdo->prepare("
-    SELECT DISTINCT u.id, u.first_name, u.last_name, u.profile_photo, u.username
+    SELECT DISTINCT u.id, u.first_name, u.last_name, u.profile_photo, u.username, u.role
     FROM users u
     JOIN messages m ON (m.sender_id = u.id OR m.receiver_id = u.id)
     WHERE (m.sender_id = ? OR m.receiver_id = ?) AND u.id != ?
@@ -19,25 +19,26 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2>Messagerie</h2>
+    <main class="surface-main">
+        <header class="page-heading"><div><span class="eyebrow">Échanges privés</span><h1><i class="fa-solid fa-comments"></i> Messagerie</h1><p>Retrouvez vos conversations et restez proche de votre réseau.</p></div><span class="heading-badge"><?= count($contacts) ?> contact<?= count($contacts) > 1 ? 's' : '' ?></span></header>
         
-        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+        <div class="list-stack">
             <?php foreach($contacts as $contact): ?>
-                <a href="<?= BASE_URL ?>messages/conversation.php?id=<?= $contact['id'] ?>" style="display: flex; align-items: center; gap: 15px; padding: 15px; border: 1px solid #eee; border-radius: 8px; text-decoration: none; color: inherit;">
-                    <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($contact['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                <a href="<?= BASE_URL ?>messages/conversation.php?id=<?= $contact['id'] ?>" class="menu-list-item">
+                    <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($contact['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" class="menu-avatar">
                     <div>
-                        <div style="font-weight: 600; font-size: 16px;"><?= htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']) ?></div>
-                        <div style="font-size: 13px; color: #666;">@<?= htmlspecialchars($contact['username']) ?></div>
+                        <strong><?= htmlspecialchars(displayFullName($contact)) ?></strong>
+                        <small>@<?= htmlspecialchars(displayUsername($contact)) ?></small>
                     </div>
+                    <i class="fa-solid fa-chevron-right menu-arrow"></i>
                 </a>
             <?php endforeach; ?>
             
             <?php if(empty($contacts)): ?>
-                <p style="color: #666; text-align: center; padding: 20px;">Vous n'avez aucune conversation. Allez sur le profil d'un utilisateur pour lui envoyer un message.</p>
+                <div class="empty-panel"><i class="fa-regular fa-message"></i><strong>Votre messagerie est vide</strong><span>Visitez le profil d’un membre pour démarrer une conversation.</span></div>
             <?php endif; ?>
         </div>
     </main>

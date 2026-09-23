@@ -1,0 +1,5 @@
+config/database.php
+uploads/
+.env
+.DS_Store
+Thumbs.db

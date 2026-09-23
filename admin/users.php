@@ -21,51 +21,51 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="admin-shell">
     <aside class="sidebar">
         <div class="sidebar-menu">
-            <a href="index.php">Tableau de bord</a>
-            <a href="users.php" style="font-weight: bold;">Gérer les utilisateurs</a>
-            <a href="posts.php">Gérer les publications</a>
-            <a href="../ads.php">Gérer les publicités</a>
+            <a href="index.php"><i class="fa-solid fa-chart-line"></i> Tableau de bord</a>
+            <a href="users.php" class="is-active"><i class="fa-solid fa-users"></i> Utilisateurs</a>
+            <a href="posts.php"><i class="fa-solid fa-newspaper"></i> Publications</a>
+            <a href="messages.php"><i class="fa-solid fa-envelope"></i> Messages</a>
+            <a href="resources.php"><i class="fa-solid fa-toolbox"></i> Ressources</a>
+            <a href="reports.php"><i class="fa-solid fa-flag"></i> Signalements</a>
+            <a href="../ads.php"><i class="fa-solid fa-bullhorn"></i> Publicités</a>
         </div>
     </aside>
     
-    <main style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2>Gestion des utilisateurs</h2>
+    <main class="admin-main">
+        <div class="admin-heading"><div><span class="eyebrow">Communauté</span><h1>Gestion des utilisateurs</h1><p>Activez, suspendez et surveillez les comptes de Naralandé.</p></div></div>
         
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <div class="admin-table-wrap"><table class="admin-table">
             <thead>
                 <tr style="background: var(--color-bg); text-align: left;">
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">ID</th>
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Utilisateur</th>
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Statut</th>
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Actions</th>
+                    <th>ID</th><th>Utilisateur</th><th>Statut</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach($users as $user): ?>
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;"><?= $user['id'] ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    <td>
                         <strong><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></strong><br>
                         <span style="font-size: 12px; color: #666;">@<?= htmlspecialchars($user['username']) ?></span>
                     </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                        <span style="color: <?= $user['status'] == 'active' ? 'green' : 'red' ?>; font-weight: bold;">
+                    <td>
+                        <span class="status-pill status-<?= $user['status'] === 'active' ? 'active' : 'suspended' ?>">
                             <?= strtoupper($user['status']) ?>
                         </span>
                     </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    <td>
                         <?php if($user['role'] !== 'admin'): ?>
                             <form method="POST" style="display:inline;">
                                 <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                 <?php if($user['status'] == 'active'): ?>
                                     <input type="hidden" name="action" value="suspend">
-                                    <button type="submit" class="btn" style="background: red; color: white; padding: 5px 10px; font-size: 12px;">Suspendre</button>
+                                    <button type="submit" class="btn btn-danger admin-action">Suspendre</button>
                                 <?php else: ?>
                                     <input type="hidden" name="action" value="activate">
-                                    <button type="submit" class="btn" style="background: green; color: white; padding: 5px 10px; font-size: 12px;">Activer</button>
+                                    <button type="submit" class="btn btn-primary admin-action">Activer</button>
                                 <?php endif; ?>
                             </form>
                         <?php endif; ?>
@@ -73,7 +73,7 @@ require_once __DIR__ . '/../includes/navbar.php';
                 </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
     </main>
 </div>
 

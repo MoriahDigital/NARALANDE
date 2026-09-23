@@ -49,8 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="auth-container">
-    <h2>Créer un compte Naralandé</h2>
+<main class="auth-layout auth-register-layout">
+    <aside class="auth-intro">
+        <a href="<?= BASE_URL ?>index.php" class="auth-brand"><img src="<?= BASE_URL ?>assets/images/logo.jpg" alt="Logo Naralandé"><span>Naralandé</span></a>
+        <span class="eyebrow">Votre prochaine étape</span>
+        <h1>Entrez dans un réseau qui vous ressemble.</h1>
+        <p>Créez votre profil, faites connaître vos talents et avancez avec les bonnes personnes.</p>
+        <div class="auth-progress"><span class="progress-active">01</span><i></i><span>02</span><i></i><span>03</span><small>Profil · Connexions · Opportunités</small></div>
+    </aside>
+    <section class="auth-container auth-register-form">
+    <a href="<?= BASE_URL ?>index.php" class="auth-back"><i class="fa-solid fa-arrow-left"></i> Retour à l’accueil</a>
+    <div class="auth-heading"><span class="section-kicker">Bienvenue</span><h2>Créer mon compte</h2><p>Quelques informations pour commencer votre parcours.</p></div>
     <?php if(!empty($errors)): ?>
         <div class="alert alert-error">
             <ul>
@@ -60,7 +69,7 @@ require_once __DIR__ . '/includes/header.php';
     <?php endif; ?>
     
     <form method="POST" action="register.php">
-        <div class="form-group">
+        <div class="form-group form-span-2">
             <label for="first_name">Prénom *</label>
             <input type="text" name="first_name" id="first_name" class="form-control" required value="<?= htmlspecialchars($_POST['first_name'] ?? '') ?>">
         </div>
@@ -118,7 +127,8 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">S'inscrire</button>
     </form>
-    <p style="margin-top: 15px; text-align: center;">Déjà un compte ? <a href="login.php">Se connecter</a></p>
-</div>
+    <p class="auth-switch">Déjà membre ? <a href="login.php">Se connecter</a></p>
+    </section>
+</main>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

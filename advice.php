@@ -55,7 +55,6 @@ if (isset($_GET['delete']) && $current_role === 'admin') {
     header('Location: advice.php');
     exit;
 }
-}
 
 // Fetch articles
 $stmt = $pdo->query("SELECT a.*, u.first_name, u.last_name, u.profile_photo FROM articles a JOIN users u ON a.user_id = u.id ORDER BY a.created_at DESC");
@@ -73,10 +72,10 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <main class="surface-main">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <h2 style="color: var(--color-primary-dark);"><i class="fa-solid fa-lightbulb"></i> Conseils & Carrière</h2>
             <?php if($current_role === 'admin'): ?>

@@ -22,16 +22,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $image = null;
 
     if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/uploads/ads/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $tmp_name = $_FILES['ad_image']['tmp_name'];
-        $filename = basename($_FILES['ad_image']['name']);
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-            $new_name = 'ad_' . time() . '.' . $ext;
-            if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                $image = $new_name;
+        if (!validateUploadSize($_FILES['ad_image'])) {
+            $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+        } else {
+            $upload_dir = __DIR__ . '/uploads/ads/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            
+            $tmp_name = $_FILES['ad_image']['tmp_name'];
+            $filename = basename($_FILES['ad_image']['name']);
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                $new_name = 'ad_' . time() . '.' . $ext;
+                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                    $image = $new_name;
+                }
             }
         }
     }
@@ -52,16 +56,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $image = null;
 
     if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/uploads/ads/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $tmp_name = $_FILES['ad_image']['tmp_name'];
-        $filename = basename($_FILES['ad_image']['name']);
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-            $new_name = 'ad_' . time() . '.' . $ext;
-            if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                $image = $new_name;
+        if (!validateUploadSize($_FILES['ad_image'])) {
+            $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+        } else {
+            $upload_dir = __DIR__ . '/uploads/ads/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            
+            $tmp_name = $_FILES['ad_image']['tmp_name'];
+            $filename = basename($_FILES['ad_image']['name']);
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                $new_name = 'ad_' . time() . '.' . $ext;
+                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                    $image = $new_name;
+                }
             }
         }
     }
@@ -106,12 +114,22 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
-    <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
+<div class="admin-shell">
+    <aside class="sidebar">
+        <div class="sidebar-menu">
+            <a href="<?= BASE_URL ?>admin/index.php"><i class="fa-solid fa-chart-line"></i> Tableau de bord</a>
+            <a href="<?= BASE_URL ?>admin/users.php"><i class="fa-solid fa-users"></i> Utilisateurs</a>
+            <a href="<?= BASE_URL ?>admin/posts.php"><i class="fa-solid fa-newspaper"></i> Publications</a>
+            <a href="<?= BASE_URL ?>admin/messages.php"><i class="fa-solid fa-envelope"></i> Messages</a>
+            <a href="<?= BASE_URL ?>admin/resources.php"><i class="fa-solid fa-toolbox"></i> Ressources</a>
+            <a href="<?= BASE_URL ?>admin/reports.php"><i class="fa-solid fa-flag"></i> Signalements</a>
+            <a href="<?= BASE_URL ?>ads.php" class="is-active"><i class="fa-solid fa-bullhorn"></i> Publicités</a>
+        </div>
+    </aside>
     
-    <main style="flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <main class="admin-main">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <h2 style="color: var(--color-primary-dark);"><i class="fa-solid fa-bullhorn"></i> Gestion des Publicités</h2>
+            <div><span class="eyebrow">Communication</span><h1>Gestion des publicités</h1><p class="admin-subtitle">Pilotez les campagnes visibles dans la communauté.</p></div>
             <button onclick="document.getElementById('add-form').style.display='block'" class="btn btn-primary">Créer une campagne</button>
         </div>
 
@@ -187,8 +205,6 @@ require_once __DIR__ . '/includes/navbar.php';
                 </div>
             <?php endif; ?>
         </div>
-        </div>
-
         <!-- Form to edit Ad -->
         <div id="edit-form" style="display: none; background: #f9fbf9; padding: 20px; border-radius: 8px; border: 1px solid #3b82f6; margin-top: 30px;">
             <h3 style="margin-bottom: 15px; font-size: 18px; color: #3b82f6;">Modifier la publicité</h3>

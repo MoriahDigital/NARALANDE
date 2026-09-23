@@ -7,6 +7,11 @@ $user_id = $_GET['id'] ?? $_SESSION['user_id'];
 $current_user_id = $_SESSION['user_id'];
 $is_own_profile = ($user_id == $current_user_id);
 
+$phoneVisibleColumn = $pdo->query("SHOW COLUMNS FROM users LIKE 'phone_visible'")->fetch();
+if (!$phoneVisibleColumn) {
+    $pdo->exec("ALTER TABLE users ADD phone_visible TINYINT(1) NOT NULL DEFAULT 0 AFTER phone");
+}
+
 $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->execute([$user_id]);
 $profile_user = $stmt->fetch();
@@ -30,7 +35,7 @@ if (!$is_own_profile) {
 
 // Fetch posts for this user
 $posts_query = "
-    SELECT p.*, u.first_name, u.last_name, u.username, u.profile_photo,
+    SELECT p.*, u.first_name, u.last_name, u.username, u.profile_photo, u.role,
     (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
     (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) as user_liked
     FROM posts p 
@@ -43,9 +48,20 @@ $posts_stmt = $pdo->prepare($posts_query);
 $posts_stmt->execute([$current_user_id, $user_id]);
 $posts = $posts_stmt->fetchAll();
 
+$reaction_rows = $pdo->query("SELECT post_id, mood, COUNT(*) AS total FROM likes GROUP BY post_id, mood")->fetchAll();
+$reactions_by_post = [];
+foreach ($reaction_rows as $reaction) {
+    $reactions_by_post[$reaction['post_id']][$reaction['mood']] = (int) $reaction['total'];
+}
+$reaction_people_rows = $pdo->query("SELECT l.post_id, l.mood, u.id AS user_id, u.first_name, u.last_name, u.username, u.profile_photo, u.role FROM likes l JOIN users u ON u.id = l.user_id ORDER BY l.created_at DESC")->fetchAll();
+$reaction_people_by_post = [];
+foreach ($reaction_people_rows as $reaction) {
+    $reaction_people_by_post[$reaction['post_id']][] = $reaction;
+}
+
 // Fetch comments for these posts
 $comments_stmt = $pdo->prepare("
-    SELECT c.*, u.first_name, u.last_name, u.profile_photo 
+    SELECT c.*, u.first_name, u.last_name, u.profile_photo, u.role
     FROM comments c
     JOIN users u ON c.user_id = u.id
     WHERE c.post_id IN (SELECT id FROM posts WHERE user_id = ?)
@@ -82,10 +98,14 @@ if ($is_own_profile && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $type = strtolower($type[1]);
             $data = base64_decode($data);
             if ($data !== false) {
-                $new_name = 'profile_' . $user_id . '_' . time() . '.' . $type;
-                if (file_put_contents($upload_dir_profiles . $new_name, $data)) {
-                    $profile_photo = $new_name;
-                    $posted_profile = true;
+                if (strlen($data) > MAX_UPLOAD_SIZE) {
+                    $error = "La photo de profil ne doit pas dépasser 5 Mo.";
+                } else {
+                    $new_name = 'profile_' . $user_id . '_' . time() . '.' . $type;
+                    if (file_put_contents($upload_dir_profiles . $new_name, $data)) {
+                        $profile_photo = $new_name;
+                        $posted_profile = true;
+                    }
                 }
             }
         }
@@ -99,10 +119,14 @@ if ($is_own_profile && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $type = strtolower($type[1]);
             $data = base64_decode($data);
             if ($data !== false) {
-                $new_name = 'cover_' . $user_id . '_' . time() . '.' . $type;
-                if (file_put_contents($upload_dir_covers . $new_name, $data)) {
-                    $cover_photo = $new_name;
-                    $posted_cover = true;
+                if (strlen($data) > MAX_UPLOAD_SIZE) {
+                    $error = "La photo de couverture ne doit pas dépasser 5 Mo.";
+                } else {
+                    $new_name = 'cover_' . $user_id . '_' . time() . '.' . $type;
+                    if (file_put_contents($upload_dir_covers . $new_name, $data)) {
+                        $cover_photo = $new_name;
+                        $posted_cover = true;
+                    }
                 }
             }
         }
@@ -137,12 +161,12 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+    <main class="profile-main">
         <!-- Cover Photo -->
-        <div style="height: 200px; background-color: #ddd; background-image: url('<?= BASE_URL ?>uploads/covers/<?= htmlspecialchars($profile_user['cover_photo']) ?>'); background-size: cover; background-position: center; position: relative;">
+        <div class="profile-cover" style="background-image: url('<?= BASE_URL ?>uploads/covers/<?= htmlspecialchars($profile_user['cover_photo']) ?>');">
             <?php if($is_own_profile): ?>
                 <label for="cover-upload" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; transition: background 0.3s;">
                     <i class="fa-solid fa-camera"></i> Modifier la couverture
@@ -151,10 +175,10 @@ require_once __DIR__ . '/../includes/navbar.php';
             <?php endif; ?>
         </div>
         
-        <div style="padding: 20px; position: relative;">
+        <div class="profile-body">
             <!-- Profile Photo -->
-            <div style="position: absolute; top: -80px; left: 20px; width: 160px; height: 160px;">
-                <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($profile_user['profile_photo']) ?>" alt="Photo de profil" style="width: 100%; height: 100%; border-radius: 50%; border: 4px solid #fff; object-fit: cover; background-color: #eee;">
+            <div class="profile-photo-wrap">
+                <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($profile_user['profile_photo']) ?>" alt="Photo de profil" class="profile-photo">
                 <?php if($is_own_profile): ?>
                     <label for="profile-upload" style="position: absolute; bottom: 10px; right: 10px; background: var(--color-primary); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s;">
                         <i class="fa-solid fa-camera" style="font-size: 18px;"></i>
@@ -163,15 +187,16 @@ require_once __DIR__ . '/../includes/navbar.php';
                 <?php endif; ?>
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-left: 190px;">
+            <div class="profile-identity-row">
                 <div>
-                    <h2 style="margin-bottom: 5px;"><?= htmlspecialchars($profile_user['first_name'] . ' ' . $profile_user['last_name']) ?></h2>
-                    <p style="color: #666; margin-bottom: 10px;">@<?= htmlspecialchars($profile_user['username']) ?></p>
+                    <span class="eyebrow">Profil membre</span>
+                    <h2 class="profile-name"><?= htmlspecialchars(displayFullName($profile_user)) ?></h2>
+                    <p class="profile-handle">@<?= htmlspecialchars(displayUsername($profile_user)) ?></p>
                     
                     <?php if($is_own_profile || ($friendship && $friendship['status'] === 'accepted')): ?>
                         <p><?= nl2br(htmlspecialchars($profile_user['bio'] ?? '')) ?></p>
                         
-                        <?php if($is_own_profile || $profile_user['phone_visible']): ?>
+                        <?php if($is_own_profile || !empty($profile_user['phone_visible'])): ?>
                             <?php if(!empty($profile_user['phone'])): ?>
                                 <p style="color: #444; margin-top: 10px; font-size: 14px;">
                                     <i class="fa-solid fa-phone"></i> <?= htmlspecialchars($profile_user['phone']) ?>
@@ -179,8 +204,9 @@ require_once __DIR__ . '/../includes/navbar.php';
                             <?php endif; ?>
                         <?php endif; ?>
                         
-                        <div style="display: flex; gap: 20px; margin-top: 15px; font-weight: 500;">
-                            <span><span id="friends-count"><?= $friendsCount ?></span> Amis</span>
+                        <div class="profile-stats">
+                            <span><strong id="friends-count"><?= $friendsCount ?></strong> Amis</span>
+                            <span><strong><?= count($posts) ?></strong> Publications</span>
                         </div>
                     <?php else: ?>
                         <div style="background: #fff3cd; color: #856404; padding: 10px 15px; border-radius: 8px; font-size: 14px; display: inline-block; margin-top: 10px;">
@@ -190,7 +216,7 @@ require_once __DIR__ . '/../includes/navbar.php';
                 </div>
                 
                 <?php if(!$is_own_profile): ?>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="profile-actions">
                         <?php if(!$friendship): ?>
                             <button onclick="friendAction(<?= $user_id ?>, 'add')" class="btn btn-primary">Ajouter aux amis</button>
                         <?php elseif($friendship['status'] === 'pending' && $friendship['follower_id'] == $current_user_id): ?>
@@ -209,9 +235,9 @@ require_once __DIR__ . '/../includes/navbar.php';
                 <?php endif; ?>
             </div>
             
-            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            <div class="profile-content-section">
                 <?php if($is_own_profile): ?>
-                    <h3>Modifier mon profil</h3>
+                    <div class="profile-section-heading"><div><span class="section-kicker">Personnalisation</span><h3>Modifier mon profil</h3></div><i class="fa-solid fa-pen-to-square"></i></div>
                     <?php if($success) echo "<div class='alert alert-success'>$success</div>"; ?>
                     <?php if($error) echo "<div class='alert alert-error'>$error</div>"; ?>
                     
@@ -225,66 +251,76 @@ require_once __DIR__ . '/../includes/navbar.php';
                             <input type="text" name="phone" id="phone" class="form-control" value="<?= htmlspecialchars($profile_user['phone'] ?? '') ?>">
                         </div>
                         <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
-                            <input type="checkbox" name="phone_visible" id="phone_visible" value="1" <?= $profile_user['phone_visible'] ? 'checked' : '' ?>>
-                            <label for="phone_visible" style="margin-bottom: 0; font-weight: 400;">Rendre mon numéro de téléphone public</label>
+                            <input type="checkbox" name="phone_visible" id="phone_visible" value="1" <?= !empty($profile_user['phone_visible']) ? 'checked' : '' ?>>
+                            <label for="phone_visible" style="margin-bottom: 0; font-weight: 400;">Afficher mon numéro aux autres membres</label>
                         </div>
                         <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Enregistrer les modifications</button>
                     </form>
                 <?php endif; ?>
 
                 <?php if($is_own_profile || ($friendship && $friendship['status'] === 'accepted')): ?>
-                    <div style="margin-top: 40px;">
-                        <h3 style="margin-bottom: 20px;">Publications de <?= htmlspecialchars($profile_user['first_name']) ?></h3>
+                    <div class="profile-posts-section">
+                        <div class="profile-section-heading"><div><span class="section-kicker">Activité</span><h3>Publications de <?= htmlspecialchars($profile_user['first_name']) ?></h3></div><i class="fa-solid fa-newspaper"></i></div>
                         
                         <div class="feed">
                             <?php foreach($posts as $post): ?>
-                            <div id="post-<?= $post['id'] ?>" style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px;">
+                            <div id="post-<?= $post['id'] ?>" class="profile-post-card">
                                 <!-- Post Header -->
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                                     <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($post['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background-color: #eee;">
-                                    <div>
+                                    <div style="flex: 1;">
                                         <div style="font-weight: 600; color: var(--color-text);">
-                                            <?= htmlspecialchars($post['first_name'] . ' ' . $post['last_name']) ?>
+                                            <?= htmlspecialchars(displayFullName($post)) ?>
                                         </div>
-                                        <div style="font-size: 12px; color: #666;">@<?= htmlspecialchars($post['username']) ?> • <?= date('d/m/Y H:i', strtotime($post['created_at'])) ?></div>
+                                        <div style="font-size: 12px; color: #666;">@<?= htmlspecialchars(displayUsername($post)) ?> • <?= date('d/m/Y H:i', strtotime($post['created_at'])) ?></div>
                                     </div>
+                                    <?php if($is_own_profile): ?>
+                                    <div class="post-menu-wrap">
+                                        <button type="button" class="post-menu-toggle" onclick="togglePostMenu(<?= $post['id'] ?>)" aria-label="Options"><i class="fa-solid fa-ellipsis"></i></button>
+                                        <div id="post-menu-<?= $post['id'] ?>" class="post-menu-dropdown" hidden>
+                                            <button type="button" onclick="deletePost(<?= $post['id'] ?>)"><i class="fa-solid fa-trash-can"></i> Supprimer</button>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <!-- Post Content -->
                                 <div style="margin-bottom: 15px;">
                                     <p style="white-space: pre-wrap;"><?= htmlspecialchars($post['content']) ?></p>
                                     <?php if($post['image']): ?>
-                                        <img src="<?= BASE_URL ?>uploads/posts/<?= htmlspecialchars($post['image']) ?>" alt="Post image" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">
+                                        <img src="<?= BASE_URL ?>uploads/posts/<?= htmlspecialchars($post['image']) ?>" alt="Post image" class="profile-post-image" onclick="openLightbox(this.src)">
                                     <?php endif; ?>
                                 </div>
                                 
                                 <!-- Like/Comment Counts -->
                                 <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 10px;">
-                                    <span id="like-count-<?= $post['id'] ?>"><?= $post['like_count'] ?> J'aime</span>
                                     <?php $comments_for_post = $comments_by_post[$post['id']] ?? []; ?>
-                                    <span><?= count($comments_for_post) ?> Commentaires</span>
+                                    <button type="button" class="count-link" id="like-count-<?= $post['id'] ?>" onclick="showPostPeople('Réactions', <?= htmlspecialchars(json_encode($reaction_people_by_post[$post['id']] ?? []), ENT_QUOTES, 'UTF-8') ?>)"><?= $post['like_count'] ?> J'aime</button>
+                                    <button type="button" class="count-link" onclick="showPostPeople('Commentaires', <?= htmlspecialchars(json_encode($comments_for_post), ENT_QUOTES, 'UTF-8') ?>)"><?= count($comments_for_post) ?> Commentaires</button>
+                                </div>
+                                <div class="reaction-summary" aria-label="Réactions par humeur">
+                                    <?php $reaction_icons = ['like' => '👍', 'love' => '❤️', 'haha' => '😂', 'wow' => '😮', 'sad' => '😢', 'angry' => '😡']; ?>
+                                    <?php foreach ($reaction_icons as $mood => $icon): ?>
+                                        <?php if (!empty($reactions_by_post[$post['id']][$mood])): ?><span title="<?= $mood ?>"><?= $icon ?> <b><?= $reactions_by_post[$post['id']][$mood] ?></b></span><?php endif; ?>
+                                    <?php endforeach; ?>
                                 </div>
 
                                 <!-- Interactions -->
-                                <div style="display: flex; gap: 10px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 5px 0; color: #666; font-size: 13px; margin-bottom: 10px;">
-                                    <button onclick="toggleLike(<?= $post['id'] ?>)" id="like-btn-<?= $post['id'] ?>" style="background: none; border: none; cursor: pointer; color: <?= $post['user_liked'] ? 'var(--color-primary)' : '#666' ?>; font-weight: 600; display: flex; align-items: center; gap: 5px;">
-                                        J'aime
-                                    </button>
-                                    <button onclick="document.getElementById('comment-box-<?= $post['id'] ?>').focus()" style="background: none; border: none; cursor: pointer; color: #666; font-weight: 600; display: flex; align-items: center; gap: 5px;">
-                                        Commenter
-                                    </button>
+                                <div class="feed-actions">
+                                    <div class="reaction-wrap"><button type="button" onclick="toggleReactionMenu(<?= $post['id'] ?>)" id="like-btn-<?= $post['id'] ?>" class="action-btn"><span class="reaction-icon"><?= $post['user_liked'] ? '👍' : '🙂' ?></span> <span class="reaction-label"><?= $post['user_liked'] ? 'Réagi' : 'Humeur' ?></span></button><div id="reaction-menu-<?= $post['id'] ?>" class="reaction-menu" hidden><button type="button" onclick="sendReaction(<?= $post['id'] ?>, 'like')">👍</button><button type="button" onclick="sendReaction(<?= $post['id'] ?>, 'love')">❤️</button><button type="button" onclick="sendReaction(<?= $post['id'] ?>, 'haha')">😂</button><button type="button" onclick="sendReaction(<?= $post['id'] ?>, 'wow')">😮</button><button type="button" onclick="sendReaction(<?= $post['id'] ?>, 'sad')">😢</button><button type="button" onclick="sendReaction(<?= $post['id'] ?>, 'angry')">😡</button></div></div>
+                                    <button type="button" onclick="toggleComments(<?= $post['id'] ?>)" class="action-btn"><i class="fa-solid fa-comment"></i> Commentaires</button>
                                     <button onclick="sharePost(<?= $post['id'] ?>)" style="background: none; border: none; cursor: pointer; color: #666; font-weight: 600; display: flex; align-items: center; gap: 5px;">
                                         Partager
                                     </button>
                                 </div>
 
                                 <!-- Comments Section -->
-                                <div>
+                                <div id="comments-<?= $post['id'] ?>" class="comments-area">
                                     <?php foreach($comments_for_post as $c): ?>
                                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                                         <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($c['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
                                         <div style="background: #f0f2f5; padding: 8px 12px; border-radius: 15px; font-size: 14px; max-width: calc(100% - 40px);">
-                                            <strong><?= htmlspecialchars($c['first_name'] . ' ' . $c['last_name']) ?></strong>
+                                            <strong><?= htmlspecialchars(displayFullName($c)) ?></strong>
                                             <p style="margin-top: 2px;"><?= nl2br(htmlspecialchars($c['content'])) ?></p>
                                         </div>
                                     </div>
@@ -315,6 +351,14 @@ require_once __DIR__ . '/../includes/navbar.php';
     </main>
 </div>
 
+<div id="people-modal" class="people-modal" hidden>
+    <div class="people-modal-backdrop" onclick="closePeopleModal()"></div>
+    <section class="people-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="people-modal-title">
+        <div class="people-modal-header"><h2 id="people-modal-title">Interactions</h2><button type="button" onclick="closePeopleModal()" class="people-modal-close" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button></div>
+        <div id="people-modal-list" class="people-modal-list"></div>
+    </section>
+</div>
+
 <!-- Hidden forms for cropped image submissions -->
 <form method="POST" action="profile.php" id="cropped-form" style="display: none;">
     <input type="hidden" name="cropped_profile" id="cropped_profile_input">
@@ -337,9 +381,31 @@ require_once __DIR__ . '/../includes/navbar.php';
 
 <?php if(!$is_own_profile): ?>
 <script>
-function toggleLike(postId) {
+function showPostPeople(title, people) {
+    const modal = document.getElementById('people-modal');
+    const list = document.getElementById('people-modal-list');
+    document.getElementById('people-modal-title').textContent = title;
+    if (!people.length) {
+        list.innerHTML = '<div class="people-empty">Aucune interaction pour le moment.</div>';
+    } else {
+        const moods = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' };
+        list.innerHTML = people.map(person => { const name = person.role === 'admin' ? 'Naralandé' : (person.first_name + ' ' + person.last_name); const username = person.role === 'admin' ? 'naralande_officiel' : (person.username || ''); return `<a class="people-modal-item" href="<?= BASE_URL ?>users/profile.php?id=${person.user_id}"><img src="<?= BASE_URL ?>uploads/profiles/${encodeURIComponent(person.profile_photo || 'default_profile.png')}" alt=""><span><strong>${escapePeopleHtml(name)}</strong><small>@${escapePeopleHtml(username)}</small></span>${person.mood ? `<b class="people-mood">${moods[person.mood] || '🙂'}</b>` : ''}</a>`; }).join('');
+    }
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+}
+function closePeopleModal() { document.getElementById('people-modal').hidden = true; document.body.classList.remove('modal-open'); }
+function escapePeopleHtml(value) { const div = document.createElement('div'); div.textContent = value; return div.innerHTML; }
+
+function toggleReactionMenu(postId) {
+    const menu = document.getElementById('reaction-menu-' + postId);
+    menu.hidden = !menu.hidden;
+}
+
+function sendReaction(postId, mood) {
     const formData = new FormData();
     formData.append('post_id', postId);
+    formData.append('mood', mood);
 
     fetch('<?= BASE_URL ?>posts/like.php', {
         method: 'POST',
@@ -349,15 +415,28 @@ function toggleLike(postId) {
     .then(data => {
         const btn = document.getElementById('like-btn-' + postId);
         const countSpan = document.getElementById('like-count-' + postId);
+        const icon = btn.querySelector('.reaction-icon');
+        const label = btn.querySelector('.reaction-label');
+        const moods = { like: ['👍', 'J’aime'], love: ['❤️', 'J’adore'], haha: ['😂', 'Haha'], wow: ['😮', 'Waouh'], sad: ['😢', 'Triste'], angry: ['😡', 'En colère'] };
         
-        if(data.status === 'liked') {
+        if(data.status !== 'unliked') {
             btn.style.color = 'var(--color-primary)';
+            icon.textContent = moods[mood][0];
+            label.textContent = moods[mood][1];
         } else {
             btn.style.color = '#666';
+            icon.textContent = '🙂';
+            label.textContent = 'Humeur';
         }
         countSpan.innerText = data.count + " J'aime";
+        document.getElementById('reaction-menu-' + postId).hidden = true;
     })
     .catch(error => console.error('Error:', error));
+}
+
+function toggleComments(postId) {
+    const area = document.getElementById('comments-' + postId);
+    area.hidden = !area.hidden;
 }
 
 function sharePost(postId) {
@@ -405,9 +484,15 @@ function friendAction(userId, action) {
 </script>
 <?php else: ?>
 <script>
-function toggleLike(postId) {
+function toggleReactionMenu(postId) {
+    const menu = document.getElementById('reaction-menu-' + postId);
+    menu.hidden = !menu.hidden;
+}
+
+function sendReaction(postId, mood) {
     const formData = new FormData();
     formData.append('post_id', postId);
+    formData.append('mood', mood);
 
     fetch('<?= BASE_URL ?>posts/like.php', {
         method: 'POST',
@@ -417,15 +502,28 @@ function toggleLike(postId) {
     .then(data => {
         const btn = document.getElementById('like-btn-' + postId);
         const countSpan = document.getElementById('like-count-' + postId);
+        const icon = btn.querySelector('.reaction-icon');
+        const label = btn.querySelector('.reaction-label');
+        const moods = { like: ['👍', 'J’aime'], love: ['❤️', 'J’adore'], haha: ['😂', 'Haha'], wow: ['😮', 'Waouh'], sad: ['😢', 'Triste'], angry: ['😡', 'En colère'] };
         
-        if(data.status === 'liked') {
+        if(data.status !== 'unliked') {
             btn.style.color = 'var(--color-primary)';
+            icon.textContent = moods[mood][0];
+            label.textContent = moods[mood][1];
         } else {
             btn.style.color = '#666';
+            icon.textContent = '🙂';
+            label.textContent = 'Humeur';
         }
         countSpan.innerText = data.count + " J'aime";
+        document.getElementById('reaction-menu-' + postId).hidden = true;
     })
     .catch(error => console.error('Error:', error));
+}
+
+function toggleComments(postId) {
+    const area = document.getElementById('comments-' + postId);
+    area.hidden = !area.hidden;
 }
 
 function sharePost(postId) {
@@ -522,3 +620,67 @@ function sharePost(postId) {
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+
+<div id="image-lightbox" class="lightbox-modal" onclick="if(event.target===this)closeLightbox()">
+    <button type="button" class="lightbox-close" onclick="closeLightbox()" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+    <img id="lightbox-img" src="" alt="Image en plein écran">
+</div>
+
+<script>
+function openLightbox(src) {
+    const modal = document.getElementById('image-lightbox');
+    const img = document.getElementById('lightbox-img');
+    img.src = src;
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+    const modal = document.getElementById('image-lightbox');
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLightbox();
+});
+
+/* Post menu */
+function togglePostMenu(postId) {
+    document.querySelectorAll('.post-menu-dropdown').forEach(m => {
+        if (m.id !== 'post-menu-' + postId) m.hidden = true;
+    });
+    const menu = document.getElementById('post-menu-' + postId);
+    menu.hidden = !menu.hidden;
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.post-menu-wrap')) {
+        document.querySelectorAll('.post-menu-dropdown').forEach(m => m.hidden = true);
+    }
+});
+
+function deletePost(postId) {
+    if (!confirm('Voulez-vous vraiment supprimer cette publication ? Cette action est irréversible.')) return;
+
+    const formData = new FormData();
+    formData.append('post_id', postId);
+
+    fetch('<?= BASE_URL ?>posts/delete.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const card = document.getElementById('post-' + postId);
+            if (card) {
+                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => card.remove(), 300);
+            }
+        } else {
+            alert(data.message || 'Erreur lors de la suppression.');
+        }
+    })
+    .catch(() => alert("Une erreur s'est produite."));
+}
+</script>

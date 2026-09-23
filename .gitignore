@@ -1,0 +1,12 @@
+# Fichiers sensibles
+.env
+
+# Fichiers de config locaux
+config/database.php
+
+# Uploads utilisateur
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db

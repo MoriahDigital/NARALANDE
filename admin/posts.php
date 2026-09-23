@@ -21,47 +21,47 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="admin-shell">
     <aside class="sidebar">
         <div class="sidebar-menu">
-            <a href="index.php">Tableau de bord</a>
-            <a href="users.php">Gérer les utilisateurs</a>
-            <a href="posts.php" style="font-weight: bold;">Gérer les publications</a>
-            <a href="../ads.php">Gérer les publicités</a>
+            <a href="index.php"><i class="fa-solid fa-chart-line"></i> Tableau de bord</a>
+            <a href="users.php"><i class="fa-solid fa-users"></i> Utilisateurs</a>
+            <a href="posts.php" class="is-active"><i class="fa-solid fa-newspaper"></i> Publications</a>
+            <a href="messages.php"><i class="fa-solid fa-envelope"></i> Messages</a>
+            <a href="resources.php"><i class="fa-solid fa-toolbox"></i> Ressources</a>
+            <a href="reports.php"><i class="fa-solid fa-flag"></i> Signalements</a>
+            <a href="../ads.php"><i class="fa-solid fa-bullhorn"></i> Publicités</a>
         </div>
     </aside>
     
-    <main style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2>Gestion des publications</h2>
+    <main class="admin-main">
+        <div class="admin-heading"><div><span class="eyebrow">Modération</span><h1>Gestion des publications</h1><p>Gardez un fil d’actualité utile, respectueux et vivant.</p></div></div>
         
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <div class="admin-table-wrap"><table class="admin-table">
             <thead>
                 <tr style="background: var(--color-bg); text-align: left;">
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">ID</th>
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Auteur</th>
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Contenu</th>
-                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Actions</th>
+                    <th>ID</th><th>Auteur</th><th>Contenu</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach($posts as $post): ?>
                 <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;"><?= $post['id'] ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">@<?= htmlspecialchars($post['username']) ?></td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <td><?= $post['id'] ?></td>
+                    <td>@<?= htmlspecialchars($post['username']) ?></td>
+                    <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         <?= htmlspecialchars($post['content']) ?>
                     </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    <td>
                         <form method="POST" style="display:inline;" onsubmit="return confirm('Supprimer cette publication ?');">
                             <input type="hidden" name="post_id" value="<?= $post['id'] ?>">
                             <input type="hidden" name="action" value="delete">
-                            <button type="submit" class="btn" style="background: red; color: white; padding: 5px 10px; font-size: 12px;">Supprimer</button>
+                            <button type="submit" class="btn btn-danger admin-action">Supprimer</button>
                         </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
-        </table>
+        </table></div>
     </main>
 </div>
 

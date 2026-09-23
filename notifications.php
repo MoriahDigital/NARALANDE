@@ -10,7 +10,7 @@ $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_rea
 
 // Fetch notifications
 $stmt = $pdo->prepare("
-    SELECT n.*, u.first_name, u.last_name, u.profile_photo 
+    SELECT n.*, u.first_name, u.last_name, u.profile_photo, u.role
     FROM notifications n
     JOIN users u ON n.sender_id = u.id
     WHERE n.user_id = ?
@@ -29,13 +29,13 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2>Notifications</h2>
+    <main class="surface-main">
+        <header class="page-heading"><div><span class="eyebrow">Votre activité</span><h1><i class="fa-solid fa-bell"></i> Notifications</h1><p>Suivez les réactions, les invitations et les nouvelles de votre réseau.</p></div><span class="heading-badge"><?= count($notifications) ?> récente<?= count($notifications) > 1 ? 's' : '' ?></span></header>
         
-        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 15px;">
+        <div class="notification-list">
             <?php foreach($notifications as $notif): ?>
                 <?php 
                     $text = "";
@@ -54,26 +54,26 @@ require_once __DIR__ . '/includes/navbar.php';
                     }
                     else $text = htmlspecialchars($notif['message'] ?? "");
                 ?>
-                <div style="display: flex; align-items: center; gap: 15px; padding: 15px; border-bottom: 1px solid #eee; <?= $notif['is_read'] ? '' : 'background-color: #f0f8ff;' ?>">
-                    <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($notif['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                <div class="notification-item <?= $notif['is_read'] ? '' : 'is-unread' ?>">
+                    <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($notif['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" class="menu-avatar small-avatar">
                     <div>
-                        <a href="<?= BASE_URL ?>users/profile.php?id=<?= $notif['sender_id'] ?>" style="font-weight: 600; color: var(--color-text);">
-                            <?= htmlspecialchars($notif['first_name'] . ' ' . $notif['last_name']) ?>
+                        <a href="<?= BASE_URL ?>users/profile.php?id=<?= $notif['sender_id'] ?>" class="notification-author">
+                            <?= htmlspecialchars(displayFullName($notif)) ?>
                         </a>
                         <?= $text ?>
                         <?php if ($notif['type'] == 'follow' && in_array($notif['sender_id'], $pendingRequests)): ?>
-                            <div style="margin-top: 10px; display: flex; gap: 10px;" id="follow-actions-<?= $notif['sender_id'] ?>">
-                                <button onclick="handleFollow(<?= $notif['sender_id'] ?>, 'accept')" class="btn btn-primary" style="padding: 4px 10px; font-size: 12px;">Accepter</button>
-                                <button onclick="handleFollow(<?= $notif['sender_id'] ?>, 'reject')" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">Refuser</button>
+                            <div class="notification-actions" id="follow-actions-<?= $notif['sender_id'] ?>">
+                                <button onclick="handleFollow(<?= $notif['sender_id'] ?>, 'accept')" class="btn btn-primary btn-small">Accepter</button>
+                                <button onclick="handleFollow(<?= $notif['sender_id'] ?>, 'reject')" class="btn btn-secondary btn-small">Refuser</button>
                             </div>
                         <?php endif; ?>
-                        <div style="font-size: 12px; color: #999; margin-top: 5px;"><?= date('d/m/Y H:i', strtotime($notif['created_at'])) ?></div>
+                        <div class="notification-time"><?= date('d/m/Y H:i', strtotime($notif['created_at'])) ?></div>
                     </div>
                 </div>
             <?php endforeach; ?>
             
             <?php if(empty($notifications)): ?>
-                <p style="color: #666; text-align: center; padding: 20px;">Vous n'avez aucune notification.</p>
+                <div class="empty-panel"><i class="fa-regular fa-bell-slash"></i><strong>Aucune notification pour le moment</strong><span>Les nouvelles activités apparaîtront ici.</span></div>
             <?php endif; ?>
         </div>
     </main>

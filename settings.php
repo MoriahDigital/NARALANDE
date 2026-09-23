@@ -54,50 +54,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     elseif (isset($_POST['action']) && $_POST['action'] === 'update_photo') {
         if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/uploads/profiles/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            
-            $tmp_name = $_FILES['profile_photo']['tmp_name'];
-            $filename = basename($_FILES['profile_photo']['name']);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $new_name = 'profile_' . $user_id . '_' . time() . '.' . $ext;
-                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                    $upd = $pdo->prepare("UPDATE users SET profile_photo = ? WHERE id = ?");
-                    if ($upd->execute([$new_name, $user_id])) {
-                        $success_msg = "Votre photo de profil a été mise à jour.";
-                        $user['profile_photo'] = $new_name;
+            if (!validateUploadSize($_FILES['profile_photo'])) {
+                $error_msg = "La photo de profil ne doit pas dépasser 5 Mo.";
+            } else {
+                $upload_dir = __DIR__ . '/uploads/profiles/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+                
+                $tmp_name = $_FILES['profile_photo']['tmp_name'];
+                $filename = basename($_FILES['profile_photo']['name']);
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                    $new_name = 'profile_' . $user_id . '_' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                        $upd = $pdo->prepare("UPDATE users SET profile_photo = ? WHERE id = ?");
+                        if ($upd->execute([$new_name, $user_id])) {
+                            $success_msg = "Votre photo de profil a été mise à jour.";
+                            $user['profile_photo'] = $new_name;
+                        } else {
+                            $error_msg = "Erreur lors de la mise à jour de la photo de profil.";
+                        }
                     } else {
-                        $error_msg = "Erreur lors de la mise à jour de la photo de profil.";
+                        $error_msg = "Erreur lors du téléchargement de l'image.";
                     }
                 } else {
-                    $error_msg = "Erreur lors du téléchargement de l'image.";
+                    $error_msg = "Format d'image non valide. Utilisez JPG, PNG, GIF ou WEBP.";
                 }
-            } else {
-                $error_msg = "Format d'image non valide. Utilisez JPG, PNG, GIF ou WEBP.";
             }
         } elseif (isset($_FILES['cover_photo']) && $_FILES['cover_photo']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/uploads/covers/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            
-            $tmp_name = $_FILES['cover_photo']['tmp_name'];
-            $filename = basename($_FILES['cover_photo']['name']);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $new_name = 'cover_' . $user_id . '_' . time() . '.' . $ext;
-                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                    $upd = $pdo->prepare("UPDATE users SET cover_photo = ? WHERE id = ?");
-                    if ($upd->execute([$new_name, $user_id])) {
-                        $success_msg = "Votre photo de couverture a été mise à jour.";
-                        $user['cover_photo'] = $new_name;
+            if (!validateUploadSize($_FILES['cover_photo'])) {
+                $error_msg = "La photo de couverture ne doit pas dépasser 5 Mo.";
+            } else {
+                $upload_dir = __DIR__ . '/uploads/covers/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+                
+                $tmp_name = $_FILES['cover_photo']['tmp_name'];
+                $filename = basename($_FILES['cover_photo']['name']);
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                    $new_name = 'cover_' . $user_id . '_' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                        $upd = $pdo->prepare("UPDATE users SET cover_photo = ? WHERE id = ?");
+                        if ($upd->execute([$new_name, $user_id])) {
+                            $success_msg = "Votre photo de couverture a été mise à jour.";
+                            $user['cover_photo'] = $new_name;
+                        } else {
+                            $error_msg = "Erreur lors de la mise à jour de la photo de couverture.";
+                        }
                     } else {
-                        $error_msg = "Erreur lors de la mise à jour de la photo de couverture.";
+                        $error_msg = "Erreur lors du téléchargement de l'image.";
                     }
                 } else {
-                    $error_msg = "Erreur lors du téléchargement de l'image.";
+                    $error_msg = "Format d'image non valide. Utilisez JPG, PNG, GIF ou WEBP.";
                 }
-            } else {
-                $error_msg = "Format d'image non valide. Utilisez JPG, PNG, GIF ou WEBP.";
             }
         } else {
             $error_msg = "Veuillez sélectionner une image valide.";
@@ -109,11 +117,14 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2 style="margin-bottom: 25px; color: var(--color-primary-dark);"><i class="fa-solid fa-gear"></i> Paramètres du compte</h2>
+    <main class="settings-main">
+        <header class="settings-heading">
+            <div><span class="eyebrow">Espace personnel</span><h1><i class="fa-solid fa-sliders"></i> Paramètres du compte</h1><p>Personnalisez votre profil et protégez vos accès depuis un seul endroit.</p></div>
+            <span class="settings-status"><i class="fa-solid fa-circle-check"></i> Compte actif</span>
+        </header>
         
         <?php if ($success_msg): ?>
             <div class="alert alert-success" style="margin-bottom: 20px;"><?= $success_msg ?></div>
@@ -123,46 +134,50 @@ require_once __DIR__ . '/includes/navbar.php';
             <div class="alert alert-error" style="margin-bottom: 20px;"><?= $error_msg ?></div>
         <?php endif; ?>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <section class="settings-section">
+            <div class="settings-section-heading"><div><span class="section-kicker">Apparence</span><h2>Votre identité visuelle</h2></div><i class="fa-solid fa-camera-retro"></i></div>
+            <div class="settings-media-grid">
             <!-- Photo de Profil -->
-            <div style="background: #f9fbf9; padding: 20px; border-radius: 8px; border: 1px solid #e0e6e3; display: flex; align-items: center; gap: 20px;">
-                <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($user['profile_photo'] ?? 'default_profile.png') ?>" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-primary);">
-                <div style="flex: 1;">
-                    <h3 style="margin-bottom: 10px; font-size: 16px;">Photo de Profil</h3>
-                    <form method="POST" action="settings.php" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="settings-card media-card">
+                <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($user['profile_photo'] ?? 'default_profile.png') ?>" class="settings-profile-preview">
+                <div class="settings-card-content">
+                    <h3>Photo de profil</h3><p>Une image claire aide les autres membres à vous reconnaître.</p>
+                    <form method="POST" action="settings.php" enctype="multipart/form-data" class="settings-upload-form">
                         <input type="hidden" name="action" value="update_photo">
                         <input type="file" name="profile_photo" class="form-control" accept="image/*" required>
-                        <button type="submit" class="btn btn-primary btn-sm" style="align-self: flex-start;">Changer</button>
+                        <button type="submit" class="btn btn-primary btn-small">Mettre à jour</button>
                     </form>
                 </div>
             </div>
 
             <!-- Photo de Couverture -->
-            <div style="background: #f9fbf9; padding: 20px; border-radius: 8px; border: 1px solid #e0e6e3; display: flex; align-items: center; gap: 20px;">
-                <div style="width: 120px; height: 80px; border-radius: 4px; overflow: hidden; border: 1px solid #ddd; flex-shrink: 0;">
+            <div class="settings-card media-card">
+                <div class="settings-cover-preview">
                     <?php if(!empty($user['cover_photo']) && $user['cover_photo'] !== 'default_cover.png'): ?>
                         <img src="<?= BASE_URL ?>uploads/covers/<?= htmlspecialchars($user['cover_photo']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
                     <?php else: ?>
-                        <div style="width: 100%; height: 100%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                        <div class="settings-cover-empty">
                             <i class="fa-solid fa-image"></i>
                         </div>
                     <?php endif; ?>
                 </div>
-                <div style="flex: 1;">
-                    <h3 style="margin-bottom: 10px; font-size: 16px;">Photo de Couverture</h3>
-                    <form method="POST" action="settings.php" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="settings-card-content">
+                    <h3>Photo de couverture</h3><p>Donnez du caractère à l’en-tête de votre profil.</p>
+                    <form method="POST" action="settings.php" enctype="multipart/form-data" class="settings-upload-form">
                         <input type="hidden" name="action" value="update_photo">
                         <input type="file" name="cover_photo" class="form-control" accept="image/*" required>
-                        <button type="submit" class="btn btn-primary btn-sm" style="align-self: flex-start;">Changer</button>
+                        <button type="submit" class="btn btn-primary btn-small">Mettre à jour</button>
                     </form>
                 </div>
             </div>
-        </div>
+            </div>
+            </div>
+        </section>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <div class="settings-columns">
             <!-- Informations Personnelles -->
-            <div style="background: #f9fbf9; padding: 20px; border-radius: 8px; border: 1px solid #e0e6e3;">
-                <h3 style="margin-bottom: 15px; font-size: 18px;"><i class="fa-solid fa-user"></i> Informations Personnelles</h3>
+            <section class="settings-card settings-form-card">
+                <div class="settings-card-title"><span class="settings-icon"><i class="fa-solid fa-user"></i></span><div><h2>Informations personnelles</h2><p>Gardez vos informations à jour.</p></div></div>
                 <form method="POST" action="settings.php">
                     <input type="hidden" name="action" value="update_info">
                     
@@ -180,34 +195,35 @@ require_once __DIR__ . '/includes/navbar.php';
                         </select>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Mettre à jour</button>
+                    <button type="submit" class="btn btn-primary settings-submit">Enregistrer les informations</button>
                 </form>
-            </div>
+            </section>
 
             <!-- Sécurité du Compte -->
-            <div style="background: #f9fbf9; padding: 20px; border-radius: 8px; border: 1px solid #e0e6e3;">
-                <h3 style="margin-bottom: 15px; font-size: 18px; color: #d9534f;"><i class="fa-solid fa-shield-halved"></i> Sécurité</h3>
+            <section class="settings-card settings-form-card security-card">
+                <div class="settings-card-title"><span class="settings-icon security-icon"><i class="fa-solid fa-shield-halved"></i></span><div><h2>Sécurité du compte</h2><p>Renforcez la protection de votre accès.</p></div></div>
                 <form method="POST" action="settings.php">
                     <input type="hidden" name="action" value="update_password">
                     
-                    <div class="form-group" style="position: relative;">
+                    <div class="form-group">
                         <label for="current_password">Mot de passe actuel</label>
                         <input type="password" name="current_password" id="current_password" class="form-control" required>
                     </div>
                     
-                    <div class="form-group" style="position: relative;">
+                    <div class="form-group">
                         <label for="new_password">Nouveau mot de passe</label>
                         <input type="password" name="new_password" id="new_password" class="form-control" required>
                     </div>
                     
-                    <div class="form-group" style="position: relative;">
+                    <div class="form-group">
                         <label for="confirm_password">Confirmer le nouveau mot de passe</label>
                         <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" style="width: 100%; background: #d9534f; border-color: #d9534f;">Changer le mot de passe</button>
+                    <p class="password-note"><i class="fa-solid fa-lock"></i> Minimum 6 caractères, avec une combinaison difficile à deviner.</p>
+                    <button type="submit" class="btn btn-danger settings-submit">Changer le mot de passe</button>
                 </form>
-            </div>
+            </section>
         </div>
     </main>
 </div>

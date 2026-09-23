@@ -23,16 +23,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $current_role === 'admin') {
     $image = null;
 
     if (isset($_FILES['formation_image']) && $_FILES['formation_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = __DIR__ . '/uploads/formations/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $tmp_name = $_FILES['formation_image']['tmp_name'];
-        $filename = basename($_FILES['formation_image']['name']);
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-            $new_name = 'form_' . time() . '.' . $ext;
-            if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                $image = $new_name;
+        if (!validateUploadSize($_FILES['formation_image'])) {
+            $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+        } else {
+            $upload_dir = __DIR__ . '/uploads/formations/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            
+            $tmp_name = $_FILES['formation_image']['tmp_name'];
+            $filename = basename($_FILES['formation_image']['name']);
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                $new_name = 'form_' . time() . '.' . $ext;
+                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                    $image = $new_name;
+                }
             }
         }
     }
@@ -59,16 +63,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $current_role === 'admin') {
         $image = null;
         
         if (isset($_FILES['formation_image']) && $_FILES['formation_image']['error'] === UPLOAD_ERR_OK) {
-            $upload_dir = __DIR__ . '/uploads/formations/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            
-            $tmp_name = $_FILES['formation_image']['tmp_name'];
-            $filename = basename($_FILES['formation_image']['name']);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $new_name = 'form_' . time() . '.' . $ext;
-                if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-                    $image = $new_name;
+            if (!validateUploadSize($_FILES['formation_image'])) {
+                $upload_error = "L'image ne doit pas dépasser 5 Mo.";
+            } else {
+                $upload_dir = __DIR__ . '/uploads/formations/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+                
+                $tmp_name = $_FILES['formation_image']['tmp_name'];
+                $filename = basename($_FILES['formation_image']['name']);
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if (in_array($ext, ALLOWED_IMAGE_EXTENSIONS)) {
+                    $new_name = 'form_' . time() . '.' . $ext;
+                    if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
+                        $image = $new_name;
+                    }
                 }
             }
         }
@@ -94,7 +102,6 @@ if (isset($_GET['delete']) && $current_role === 'admin') {
     $stmt->execute([$id]);
     header('Location: formations.php');
     exit;
-}
 }
 
 // Fetch formations
@@ -133,12 +140,12 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <main class="surface-main">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <h2 style="color: var(--color-primary-dark);"><i class="fa-solid fa-graduation-cap"></i> Formations & Écoles</h2>
+            <div><span class="eyebrow">Catalogue éducatif</span><h1><i class="fa-solid fa-graduation-cap"></i> Formations & écoles</h1><p class="admin-subtitle">Comparez les parcours, organismes, formats et débouchés disponibles.</p></div>
             <?php if($current_role === 'admin'): ?>
                 <button onclick="document.getElementById('add-form').style.display='block'" class="btn btn-primary">Proposer une formation</button>
             <?php endif; ?>

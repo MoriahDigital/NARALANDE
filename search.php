@@ -28,37 +28,37 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 ?>
 
-<div style="display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 20px;">
+<div class="page-shell content-layout">
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
     
-    <main style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2>Recherche</h2>
+    <main class="surface-main">
+        <header class="page-heading"><div><span class="eyebrow">Explorer le réseau</span><h1><i class="fa-solid fa-magnifying-glass"></i> Recherche</h1><p>Retrouvez rapidement les membres de votre réseau.</p></div></header>
         
-        <form method="GET" action="search.php" style="display: flex; gap: 10px; margin-top: 20px; margin-bottom: 30px;">
-            <input type="text" name="q" value="<?= htmlspecialchars($query) ?>" placeholder="Rechercher par nom ou pseudo..." class="form-control" style="flex: 1;" required>
+        <form method="GET" action="search.php" class="search-bar">
+            <input type="text" name="q" value="<?= htmlspecialchars($query) ?>" placeholder="Nom, prénom ou pseudo..." class="form-control" required>
             <button type="submit" class="btn btn-primary">Rechercher</button>
         </form>
         
         <?php if ($query !== ''): ?>
             <h3>Résultats pour "<?= htmlspecialchars($query) ?>"</h3>
-            <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 15px;">
+            <div class="list-stack">
                 <?php foreach($results as $user): ?>
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($user['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                <div class="menu-list-item">
+                    <div class="menu-list-user">
+                        <img src="<?= BASE_URL ?>uploads/profiles/<?= htmlspecialchars($user['profile_photo'] ?? 'default_profile.png') ?>" alt="Photo" class="menu-avatar">
                         <div>
-                            <a href="<?= BASE_URL ?>users/profile.php?id=<?= $user['id'] ?>" style="font-weight: 600; font-size: 16px; color: var(--color-text);">
+                            <a href="<?= BASE_URL ?>users/profile.php?id=<?= $user['id'] ?>" class="menu-list-name">
                                 <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
                             </a>
-                            <div style="color: #666; font-size: 14px;">@<?= htmlspecialchars($user['username']) ?></div>
+                            <div class="menu-list-handle">@<?= htmlspecialchars($user['username']) ?></div>
                         </div>
                     </div>
-                    <a href="<?= BASE_URL ?>users/profile.php?id=<?= $user['id'] ?>" class="btn btn-secondary" style="padding: 6px 15px;">Voir le profil</a>
+                    <a href="<?= BASE_URL ?>users/profile.php?id=<?= $user['id'] ?>" class="btn btn-secondary btn-small">Voir le profil</a>
                 </div>
                 <?php endforeach; ?>
                 
                 <?php if(empty($results)): ?>
-                    <p style="color: #666;">Aucun utilisateur trouvé.</p>
+                    <div class="empty-panel"><i class="fa-solid fa-user-slash"></i><strong>Aucun utilisateur trouvé</strong><span>Essayez un autre nom ou pseudo.</span></div>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
